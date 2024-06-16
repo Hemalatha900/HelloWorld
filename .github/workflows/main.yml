@@ -41,4 +41,21 @@ jobs:
         docker tag myapp:latest helloworldtestacr.azurecr.io/myapp:${{ steps.tag.outputs.tag }}
         docker push helloworldtestacr.azurecr.io/myapp:${{ steps.tag.outputs.tag }}
 
-        
+    - name: Add Helm repository
+      run: |
+          az account set --subscription 5607762b-10a1-4cf9-a3fc-6f75e64b5f01
+          az aks get-credentials --resource-group NetworkWatcherRG --name helloWorld --overwrite-existing
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+
+    - name: Create namespace
+      run: |
+          kubectl create namespace ingress-nginx || echo "Namespace ingress-nginx already exists"
+
+    - name: Install NGINX Ingress Controller
+      run: |
+          if ! helm status nginx-ingress --namespace ingress-nginx; then
+            helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-nginx
+          else
+            echo "NGINX Ingress Controller is already installed"
+          fi
