@@ -1,0 +1,44 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Build Docker image
+      run: |
+       ls -a
+       docker build -t myapp:latest .
+       echo " build image successfully "
+       docker images
+    - name: Trivy scan
+      uses: aquasecurity/trivy-action@master
+      continue-on-error: true
+      with:
+        image-ref: myapp:latest
+        format: 'table'
+        output: 'trivy-report.txt'
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Log in to Azure Container Registry
+      run: az acr login --name helloworldtestacr
+    - name: Tag Docker image
+      id: tag
+      run: echo "::set-output name=tag::1.0"
+    - name: Push Docker image
+      run: |
+        docker tag myapp:latest helloworldtestacr.azurecr.io/myapp:${{ steps.tag.outputs.tag }}
+        docker push helloworldtestacr.azurecr.io/myapp:${{ steps.tag.outputs.tag }}
+
+        
